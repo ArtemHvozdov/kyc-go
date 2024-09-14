@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"net/http"
 	"strings"
 	"time"
@@ -20,23 +19,15 @@ import (
 	// "github.com/iden3/iden3comm/v2/protocol"
 )
 
+const VerificationKeyPath = "verification_key.json"
+
 type KeyLoader struct {
 	Dir string
 }
 
-func (kl *KeyLoader) Load(circuitID circuits.CircuitID) ([]byte, error) {
-	// Используем Sprintf для преобразования circuitID в строку
-	keyPath := filepath.Join(kl.Dir, fmt.Sprintf("%v.vk", circuitID))
-
-	// Открываем и читаем файл с верификационным ключом
-	keyBytes, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load verification key: %w", err)
-	}
-
-	return keyBytes, nil
+func (m KeyLoader) Load(id circuits.CircuitID) ([]byte, error) {
+	return os.ReadFile(fmt.Sprintf("%s/%v/%s", m.Dir, id, VerificationKeyPath))
 }
-
 
 type TokenInfo struct {
     From    string `json:"from"`
