@@ -9,6 +9,11 @@ require (
 )
 
 require (
+	github.com/iden3/go-iden3-core v1.0.2 // indirect
+	github.com/iden3/go-schema-processor v1.2.0 // indirect
+)
+
+require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/bits-and-blooms/bitset v1.14.3 // indirect
@@ -40,6 +45,7 @@ require (
 	github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 // indirect
 	github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e // indirect
 	github.com/iden3/go-schema-processor/v2 v2.4.2 // indirect
+	github.com/iden3/iden3comm v1.1.0
 	github.com/iden3/iden3comm/v2 v2.5.1 // indirect
 	github.com/ipfs/boxo v0.23.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect

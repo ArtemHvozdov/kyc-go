@@ -138,6 +138,8 @@ github.com/iden3/go-circuits/v2 v2.3.0 h1:xzDVuq4JkTgtz+AjatquuPgGVbOxRpcWMhUOcW
 github.com/iden3/go-circuits/v2 v2.3.0/go.mod h1:APhXQaRQr4txd+u0Y7liBjN/Wnox0d31wR40LkXywAE=
 github.com/iden3/go-iden3-auth/v2 v2.4.1 h1:hJxoTKsaxDxyN2hMWE2smSJkWXI0T+mIySjl4o4QPYc=
 github.com/iden3/go-iden3-auth/v2 v2.4.1/go.mod h1:YFqVZ2s8oPyx64UI/rBRqeziQu86rH7OJ5RGAPZrdY0=
+github.com/iden3/go-iden3-core v1.0.2 h1:HwNDFeqcUv4ybZj5tH+58JKWKarn/qqBpNCqTLxGP0Y=
+github.com/iden3/go-iden3-core v1.0.2/go.mod h1:X4PjlJG8OsEQEsSbzzYqqAk2olYGZ2nuGqiUPyEYjOo=
 github.com/iden3/go-iden3-core/v2 v2.2.0 h1:PcMSxJRLAoJausj1gKstzgt25HS18K+IHLaSPeI9p8Q=
 github.com/iden3/go-iden3-core/v2 v2.2.0/go.mod h1:L9PxhWPvoS9qTb3inEkZBm1RpjHBt+VTwvxssdzbAdw=
 github.com/iden3/go-iden3-crypto v0.0.16 h1:zN867xiz6HgErXVIV/6WyteGcOukE9gybYTorBMEdsk=
@@ -160,10 +162,14 @@ github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 h1:mkY6VDfwKVJc83QGKmwVXY2LYepi
 github.com/iden3/go-rapidsnark/witness/v2 v2.0.0/go.mod h1:3JRjqUfW1hgI9hzLDO0v8z/DUkR0ZUehhYLlnIfRxnA=
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e h1:WeiFCrpj5pLRtSA4Mg03yTrSZhHHqN/k5b6bwxd9/tY=
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e/go.mod h1:UEBifEzw62T6VzIHJeHuUgeLg2U/J9ttf7hOwQEqnYk=
+github.com/iden3/go-schema-processor v1.2.0 h1:kcT8zfIx0U7M2j/sOXUPdTcn9hdy7WwRhR+0yQlV4nQ=
+github.com/iden3/go-schema-processor v1.2.0/go.mod h1:OoxGutmHbpU42/mYCkzYSf4nhsEZ0Ws0ouBpWxcjp0w=
 github.com/iden3/go-schema-processor/v2 v2.4.0 h1:SlyWHTBKeS6P7asDvGKA9R2nWxwqOdeMRirU3TnDLyM=
 github.com/iden3/go-schema-processor/v2 v2.4.0/go.mod h1:eBtILnPjh4wnsAg3LWnvcZlGG+5IkAJaRqhVBnDjerg=
 github.com/iden3/go-schema-processor/v2 v2.4.2 h1:t9pMxSpyMDAU3xSpn2dTvnTUUAtPlwOcNavbgXEFiJk=
 github.com/iden3/go-schema-processor/v2 v2.4.2/go.mod h1:eBtILnPjh4wnsAg3LWnvcZlGG+5IkAJaRqhVBnDjerg=
+github.com/iden3/iden3comm v1.1.0 h1:feWurfGJV6YZyxi4J3U2jqQ+RUo0mo36Aoqyck1ZnHg=
+github.com/iden3/iden3comm v1.1.0/go.mod h1:1bJHz0xNhwbQGDxYfVwMVYsdsMjFQRkHJF/eq5Rc9wE=
 github.com/iden3/iden3comm/v2 v2.5.1 h1:Tp0jRa91r96fBREKOa7aXckusfrqyWfosTHJi+8g+nw=
 github.com/iden3/iden3comm/v2 v2.5.1/go.mod h1:j9Vh4b2azIc7J7g0WzHV54z7MpYmq89KkvxsVyBkjIE=
 github.com/ipfs/boxo v0.12.0 h1:AXHg/1ONZdRQHQLgG5JHsSC3XoE4DjCAMgK+asZvUcQ=
