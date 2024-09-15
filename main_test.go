@@ -1,13 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
 func TestAgentHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "/agent", nil)
+	// Пример токена (header.payload.proof)
+	token := `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcm9tIjoiVXNlciIsImJvZHkiOnsibWVzc2FnZSI6IkhlbGxvIFdvcmxkIn19.q6wIslF57Bo5Y6Czr7f7rUSC71Y-BF0fnD0Aq-01bmI`
+
+	// Создаем запрос с телом токена
+	req, err := http.NewRequest("POST", "/agent", bytes.NewBuffer([]byte(token)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -15,6 +20,7 @@ func TestAgentHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(agentHandler)
 
+	// Выполняем запрос
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -28,6 +34,7 @@ func TestAgentHandler(t *testing.T) {
 			rr.Body.String(), expected)
 	}
 }
+
 
 func TestStatusHandler(t *testing.T) {
 	req, err := http.NewRequest("GET", "/status", nil)
