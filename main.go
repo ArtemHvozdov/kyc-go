@@ -7,12 +7,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	circuits "github.com/iden3/go-circuits/v2"
 	auth "github.com/iden3/go-iden3-auth/v2"
+
 	// "github.com/iden3/iden3comm/protocol"
 
 	"github.com/iden3/go-iden3-auth/v2/pubsignals"
@@ -41,6 +43,13 @@ type InfoToken struct {
 	message string
 }
 
+var requestMap = make(map[string]interface{})
+
+func homehHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Server is runinng...")
+}
+
 func agentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "success")
@@ -56,78 +65,12 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/agent", agentHandler)
 	http.HandleFunc("/status", statusHandler)
+	http.HandleFunc("/", homehHandler)
 
 	fmt.Println("Server is running on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		fmt.Printf("Server failed: %s\n", err)
 	}
-}
-
-func Callback(w http.ResponseWriter, r *http.Request) {
-	sessionID := r.URL.Query().Get("sessionId")
-
-	tokenBytes, err := io.ReadAll(r.Body)
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	ethURL := "AMOY_RPC_URL"
-
-	// Add identity state contract address
-	contractAddress := "0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"
-
-	resolverPrefix := "polygon:amoy"
-
-	// Locate the directory that contains circuit's verification keys
-	keyDIR := "../keys"
-
-	// Create a map to store the auth requests and their session IDs
-	var requestMap = make(map[string]interface{})
-	
-	// fetch authRequest from sessionID
-	authRequest := requestMap[sessionID]
-
-	var verificationKeyLoader = &KeyLoader{Dir: keyDIR}
-	resolver := state.ETHResolver{
-		RPCUrl:          ethURL,
-		ContractAddress: common.HexToAddress(contractAddress),
-	}
-
-	resolvers := map[string]pubsignals.StateResolver{
-		resolverPrefix: resolver,
-	}
-
-	verifier, err := auth.NewVerifier(verificationKeyLoader, resolvers, auth.WithIPFSGateway("https://ipfs.io"))
-	if err != nil {
-		fmt.Println(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	authResponse, err := verifier.FullVerify(
-		r.Context(),
-		string(tokenBytes),
-		authRequest.(protocol.AuthorizationRequestMessage),
-		pubsignals.WithAcceptedStateTransitionDelay(time.Minute*5))
-	if err != nil {
-		fmt.Println(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//marshal auth resp
-	messageBytes, err := json.Marshal(authResponse)
-	if err != nil {
-		fmt.Println(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(messageBytes)
-	fmt.Println("verification passed")
 }
 
 func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
@@ -188,4 +131,113 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(infoToken)
 
+}
+
+func authRequest(w http.ResponseWriter, r *http.Request) {
+	rURL := "NGROK URL"
+	sessionID := 1
+	CallbackURL := "/agent"
+	Audience := "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
+
+
+	uri := fmt.Sprintf("%s%s?sessionId=%s", rURL, CallbackURL, strconv.Itoa(sessionID))
+
+	var request protocol.AuthorizationRequestMessage = auth.CreateAuthorizationRequest("test flow", Audience, uri)
+
+	request.ID = "7f38a193-0918-4a48-9fac-36adfdb8b542"
+	request.ThreadID = "7f38a193-0918-4a48-9fac-36adfdb8b542"
+
+	// Add request for a specific proof
+	var mtpProofRequest protocol.ZeroKnowledgeProofRequest
+	mtpProofRequest.ID = 1
+	mtpProofRequest.CircuitID = string(circuits.AtomicQuerySigV2CircuitID)
+	mtpProofRequest.Query = map[string]interface{}{
+		"allowedIssuers": []string{"*"},
+		"credentialSubject": map[string]interface{}{
+			"birthday": map[string]interface{}{
+				"$lt": 20000101,
+			},
+		},
+		"context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+		"type":    "KYCAgeCredential",
+	}
+	request.Body.Scope = append(request.Body.Scope, mtpProofRequest)
+
+	// Store auth request in map associated with session ID
+	
+	requestMap[strconv.Itoa(sessionID)] = request
+
+	// print request
+	fmt.Println(request)
+
+	msgBytes, _ := json.Marshal(request)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(msgBytes)
+	return
+}
+
+
+func Callback(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.URL.Query().Get("sessionId")
+
+	tokenBytes, err := io.ReadAll(r.Body)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+
+	ethURL := "https://polygon-amoy.infura.io/v3/<API-KEY>" // RPC node network
+
+	ipfsURL := "https://ipfs.io"
+
+	contractAddress := "0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"
+
+	resolverPrefix := "polygon:amoy"
+
+	keyDIR := "../keys"
+
+	authRequest := requestMap[sessionID]
+
+	var verificationKeyLoader = &KeyLoader{Dir: keyDIR}
+    resolver := state.ETHResolver{
+        RPCUrl:          ethURL,
+        ContractAddress: common.HexToAddress(contractAddress),
+    }
+
+	resolvers := map[string]pubsignals.StateResolver{
+        resolverPrefix: resolver,
+    }
+
+	verifier, err := auth.NewVerifier(verificationKeyLoader, resolvers, auth.WithIPFSGateway(ipfsURL))
+    if err != nil {
+        fmt.Println(err.Error())
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+	authResponse, err := verifier.FullVerify(
+        r.Context(),
+        string(tokenBytes),
+        authRequest.(protocol.AuthorizationRequestMessage),
+        pubsignals.WithAcceptedStateTransitionDelay(time.Minute*5))
+    if err != nil {
+        fmt.Println(err.Error())
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    //marshal auth resp
+    messageBytes, err := json.Marshal(authResponse)
+    if err != nil {
+        fmt.Println(err.Error())
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(messageBytes)
+    fmt.Println("verification passed")
 }
