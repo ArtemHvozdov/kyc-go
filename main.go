@@ -53,7 +53,7 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 func agentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "success")
-	// Callback(w, r)
+	Callback(w, r)
 	GetInfoByToken(w,r)
 }
 
@@ -188,27 +188,31 @@ func Callback(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-	ethURL := "https://polygon-amoy.infura.io/v3/<API-KEY>" // RPC node network
-
 	ipfsURL := "https://ipfs.io"
 
-	contractAddress := "0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"
-
-	resolverPrefix := "polygon:amoy"
+	resolverPrefix := "privado:test"
 
 	keyDIR := "../keys"
 
 	authRequest := requestMap[sessionID]
 
 	var verificationKeyLoader = &KeyLoader{Dir: keyDIR}
-    resolver := state.ETHResolver{
-        RPCUrl:          ethURL,
-        ContractAddress: common.HexToAddress(contractAddress),
-    }
+
+	// privadoMainStateResolver := state.ETHResolver{
+	// 	RPCUrl: "https://rpc-mainnet.privado.id",
+	// 	ContractAddress: common.HexToAddress("0x975556428F077dB5877Ea2474D783D6C69233742"),
+	// }
+
+	privadoTestStateResolver := state.ETHResolver{
+		RPCUrl: "https://rpc-testnet.privado.id/",
+		ContractAddress: common.HexToAddress("0x975556428F077dB5877Ea2474D783D6C69233742"),
+	}
 
 	resolvers := map[string]pubsignals.StateResolver{
-        resolverPrefix: resolver,
-    }
+		resolverPrefix: privadoTestStateResolver,
+	}
+	
+
 
 	verifier, err := auth.NewVerifier(verificationKeyLoader, resolvers, auth.WithIPFSGateway(ipfsURL))
     if err != nil {
