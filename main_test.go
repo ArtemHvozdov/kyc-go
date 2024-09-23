@@ -1,18 +1,24 @@
 package main
 
 import (
+	//"fmt"
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
-func TestAgentHandler(t *testing.T) {
-	// Пример токена (header.payload.proof)
-	token := `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcm9tIjoiVXNlciIsImJvZHkiOnsibWVzc2FnZSI6IkhlbGxvIFdvcmxkIn19.q6wIslF57Bo5Y6Czr7f7rUSC71Y-BF0fnD0Aq-01bmI`
+var byteTestToken, _ = os.ReadFile("test-token.txt")
 
-	// Создаем запрос с телом токена
-	req, err := http.NewRequest("POST", "/agent", bytes.NewBuffer([]byte(token)))
+var testToken = string(byteTestToken)
+
+func TestAgentHandler(t *testing.T) {
+
+	//var testToken1 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+
+	// Creating a request with the token body
+	req, err := http.NewRequest("POST", "/agent", bytes.NewBuffer([]byte(testToken)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,18 +26,18 @@ func TestAgentHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(agentHandler)
 
-	// Выполняем запрос
+	// Executing the request
 	handler.ServeHTTP(rr, req)
 
+	// Checking if the status code is correct
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
+	// Expected response
 	expected := "success"
 	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+		t.Errorf("handler returned unexpected body: got %v want %v", rr.Body.String(), expected)
 	}
 }
 

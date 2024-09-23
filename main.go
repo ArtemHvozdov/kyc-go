@@ -53,7 +53,7 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 func agentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "success")
-	Callback(w, r)
+	//Callback(w, r)
 	GetInfoByToken(w,r)
 }
 
@@ -83,7 +83,7 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 
 	tokenStr := string(tokenBytes)
 
-	fmt.Println(tokenStr)
+	//fmt.Println(tokenStr)
 
 	parts := strings.Split(tokenStr, ".")
 
@@ -95,7 +95,7 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 
 	payload, _ := base64.RawURLEncoding.DecodeString(token.payload)
 
-	fmt.Println(payload)
+	//fmt.Println(payload)
 
 	var payloadData map[string]interface{}
 
