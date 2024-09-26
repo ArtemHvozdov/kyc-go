@@ -52,9 +52,9 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 
 func agentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "success")
-	//Callback(w, r)
-	GetInfoByToken(w,r)
+	// fmt.Fprintf(w, "success")
+	Callback(w, r)
+	//GetInfoByToken(w,r)
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +63,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	http.HandleFunc("/sign-in", authRequest)
 	http.HandleFunc("/agent", agentHandler)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", homehHandler)
@@ -192,7 +193,7 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 
 	resolverPrefix := "privado:test"
 
-	keyDIR := "../keys"
+	keyDIR := "..keys"
 
 	authRequest := requestMap[sessionID]
 
@@ -231,6 +232,8 @@ func Callback(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+
+	fmt.Println("Auth response:", authResponse)
 
     //marshal auth resp
     messageBytes, err := json.Marshal(authResponse)
