@@ -53,8 +53,8 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 func agentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	// fmt.Fprintf(w, "success")
-	Callback(w, r)
-	//GetInfoByToken(w,r)
+	// Callback(w, r)
+	GetInfoByToken(w,r)
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +63,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/sign-in", authRequest)
+	// http.HandleFunc("/sign-in", GetAuthRequest)
 	http.HandleFunc("/agent", agentHandler)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", homehHandler)
@@ -84,8 +84,6 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 
 	tokenStr := string(tokenBytes)
 
-	//fmt.Println(tokenStr)
-
 	parts := strings.Split(tokenStr, ".")
 
 	token := Token{
@@ -96,8 +94,6 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 
 	payload, _ := base64.RawURLEncoding.DecodeString(token.payload)
 
-	//fmt.Println(payload)
-
 	var payloadData map[string]interface{}
 
 	err = json.Unmarshal(payload, &payloadData)
@@ -105,49 +101,39 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Error parsing JSON: %v", err)
 	}
 
+	prettyPayload, _ := json.MarshalIndent(payloadData, "", "  ")
+
+	formattedPayload := fmt.Sprintf("%s\n", prettyPayload)
+
 	infoToken := InfoToken{}
 
-	from, ok := payloadData["from"]
+	from, ok := payloadData["from"].(string)
 	if !ok {
-		fmt.Println("Error accessing body field")
-		return
-	}
-
-	body, ok := payloadData["body"].(map[string]interface{})
-	if !ok {
-		fmt.Println("Error accessing body field")
-		return
-	}
-
-	message, ok := body["message"]
-	if message == nil {
-		fmt.Println("Message field is nil")
-	}
-	if !ok {
-		fmt.Println("Error accessing message field")
+    	fmt.Println("Error: 'from' field is not a string")
+    	return
 	}
 
 	infoToken.from = fmt.Sprintf("%v", from)
-	infoToken.message = fmt.Sprintf("%v", message)
+	infoToken.message = fmt.Sprintf("%v", formattedPayload)
 
-	fmt.Println(infoToken)
-
+	fmt.Println("From:", infoToken.from)
+	fmt.Println("Message:", infoToken.message)
 }
 
-func authRequest(w http.ResponseWriter, r *http.Request) {
-	rURL := "NGROK URL"
+func GetAuthRequest(w http.ResponseWriter, r *http.Request) {
+
+	// Audience is verifier id
+	rURL := "https://511d-185-208-113-238.ngrok-free.app"
 	sessionID := 1
-	CallbackURL := "/agent"
+	CallbackURL := "/api/callback"
 	Audience := "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
-
-
+	
 	uri := fmt.Sprintf("%s%s?sessionId=%s", rURL, CallbackURL, strconv.Itoa(sessionID))
-
+	
+	// Generate request for basic authentication
 	var request protocol.AuthorizationRequestMessage = auth.CreateAuthorizationRequest("test flow", Audience, uri)
-
-	request.ID = "7f38a193-0918-4a48-9fac-36adfdb8b542"
-	request.ThreadID = "7f38a193-0918-4a48-9fac-36adfdb8b542"
-
+	
+	
 	// Add request for a specific proof
 	var mtpProofRequest protocol.ZeroKnowledgeProofRequest
 	mtpProofRequest.ID = 1
@@ -159,24 +145,24 @@ func authRequest(w http.ResponseWriter, r *http.Request) {
 				"$lt": 20000101,
 			},
 		},
-		"context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+		"context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
 		"type":    "KYCAgeCredential",
 	}
 	request.Body.Scope = append(request.Body.Scope, mtpProofRequest)
-
-	// Store auth request in map associated with session ID
 	
+	// Store auth request in map associated with session ID
 	requestMap[strconv.Itoa(sessionID)] = request
-
+	
 	// print request
 	fmt.Println(request)
-
+	
 	msgBytes, _ := json.Marshal(request)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(msgBytes)
-	return
+	
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(msgBytes)
+		return
 }
 
 

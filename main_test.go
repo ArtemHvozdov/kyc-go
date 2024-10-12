@@ -21,7 +21,7 @@ func TestAgentHandler(t *testing.T) {
 	}
 
 	signInRR := httptest.NewRecorder()
-	authHandler := http.HandlerFunc(authRequest)
+	authHandler := http.HandlerFunc(GetAuthRequest)
 
 	
 	authHandler.ServeHTTP(signInRR, signInReq)
