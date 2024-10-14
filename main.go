@@ -9,16 +9,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
+	//"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	//"github.com/ethereum/go-ethereum/common"
 	circuits "github.com/iden3/go-circuits/v2"
 	auth "github.com/iden3/go-iden3-auth/v2"
 
 	// "github.com/iden3/iden3comm/protocol"
 
-	"github.com/iden3/go-iden3-auth/v2/pubsignals"
-	"github.com/iden3/go-iden3-auth/v2/state"
+	//"github.com/iden3/go-iden3-auth/v2/pubsignals"
+	//"github.com/iden3/go-iden3-auth/v2/state"
 	"github.com/iden3/iden3comm/v2/protocol"
 )
 
@@ -51,9 +51,8 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func agentHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
+	// w.WriteHeader(http.StatusOK)
 	// fmt.Fprintf(w, "success")
-	// Callback(w, r)
 	GetInfoByToken(w,r)
 }
 
@@ -118,21 +117,26 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("From:", infoToken.from)
 	fmt.Println("Message:", infoToken.message)
+
+	authRequestJSON := GetAuthRequest()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(authRequestJSON)
 }
 
-func GetAuthRequest(w http.ResponseWriter, r *http.Request) {
+func GetAuthRequest() []byte {
 
 	// Audience is verifier id
-	rURL := "https://511d-185-208-113-238.ngrok-free.app"
+	rURL := "https://6f18-109-72-122-36.ngrok-free.app"
 	sessionID := 1
-	CallbackURL := "/api/callback"
+	CallbackURL := "/callback"
 	Audience := "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
 	
 	uri := fmt.Sprintf("%s%s?sessionId=%s", rURL, CallbackURL, strconv.Itoa(sessionID))
 	
 	// Generate request for basic authentication
 	var request protocol.AuthorizationRequestMessage = auth.CreateAuthorizationRequest("test flow", Audience, uri)
-	
 	
 	// Add request for a specific proof
 	var mtpProofRequest protocol.ZeroKnowledgeProofRequest
@@ -157,80 +161,6 @@ func GetAuthRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(request)
 	
 	msgBytes, _ := json.Marshal(request)
-
 	
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(msgBytes)
-		return
-}
-
-
-func Callback(w http.ResponseWriter, r *http.Request) {
-	sessionID := r.URL.Query().Get("sessionId")
-
-	tokenBytes, err := io.ReadAll(r.Body)
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-
-	ipfsURL := "https://ipfs.io"
-
-	resolverPrefix := "privado:test"
-
-	keyDIR := "..keys"
-
-	authRequest := requestMap[sessionID]
-
-	var verificationKeyLoader = &KeyLoader{Dir: keyDIR}
-
-	// privadoMainStateResolver := state.ETHResolver{
-	// 	RPCUrl: "https://rpc-mainnet.privado.id",
-	// 	ContractAddress: common.HexToAddress("0x975556428F077dB5877Ea2474D783D6C69233742"),
-	// }
-
-	privadoTestStateResolver := state.ETHResolver{
-		RPCUrl: "https://rpc-testnet.privado.id/",
-		ContractAddress: common.HexToAddress("0x975556428F077dB5877Ea2474D783D6C69233742"),
-	}
-
-	resolvers := map[string]pubsignals.StateResolver{
-		resolverPrefix: privadoTestStateResolver,
-	}
-	
-
-
-	verifier, err := auth.NewVerifier(verificationKeyLoader, resolvers, auth.WithIPFSGateway(ipfsURL))
-    if err != nil {
-        fmt.Println(err.Error())
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-	authResponse, err := verifier.FullVerify(
-        r.Context(),
-        string(tokenBytes),
-        authRequest.(protocol.AuthorizationRequestMessage),
-        pubsignals.WithAcceptedStateTransitionDelay(time.Minute*5))
-    if err != nil {
-        fmt.Println(err.Error())
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-	fmt.Println("Auth response:", authResponse)
-
-    //marshal auth resp
-    messageBytes, err := json.Marshal(authResponse)
-    if err != nil {
-        fmt.Println(err.Error())
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-    w.Header().Set("Content-Type", "application/json")
-    w.Write(messageBytes)
-    fmt.Println("verification passed")
+	return msgBytes
 }
