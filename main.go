@@ -5,20 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	//"time"
+	"time"
 
-	//"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	circuits "github.com/iden3/go-circuits/v2"
 	auth "github.com/iden3/go-iden3-auth/v2"
 
 	// "github.com/iden3/iden3comm/protocol"
 
-	//"github.com/iden3/go-iden3-auth/v2/pubsignals"
-	//"github.com/iden3/go-iden3-auth/v2/state"
+	"github.com/iden3/go-iden3-auth/v2/pubsignals"
+	"github.com/iden3/go-iden3-auth/v2/state"
 	"github.com/iden3/iden3comm/v2/protocol"
 )
 
@@ -51,8 +52,6 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func agentHandler(w http.ResponseWriter, r *http.Request) {
-	// w.WriteHeader(http.StatusOK)
-	// fmt.Fprintf(w, "success")
 	GetInfoByToken(w,r)
 }
 
@@ -64,6 +63,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	// http.HandleFunc("/sign-in", GetAuthRequest)
 	http.HandleFunc("/agent", agentHandler)
+	http.HandleFunc("/callback", Callback)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/", homehHandler)
 
@@ -128,7 +128,7 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 func GetAuthRequest() []byte {
 
 	// Audience is verifier id
-	rURL := "https://6f18-109-72-122-36.ngrok-free.app"
+	rURL := "https://f68c-185-208-113-238.ngrok-free.app"
 	sessionID := 1
 	CallbackURL := "/callback"
 	Audience := "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
@@ -163,4 +163,76 @@ func GetAuthRequest() []byte {
 	msgBytes, _ := json.Marshal(request)
 	
 	return msgBytes
+}
+
+
+func Callback(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("callback")
+    // Get session ID from request
+    sessionID := r.URL.Query().Get("sessionId")
+
+    // get JWZ token params from the post request
+    tokenBytes, err := io.ReadAll(r.Body)
+    if err != nil {
+        log.Println(err)
+        return
+    }
+
+    // Locate the directory that contains circuit's verification keys
+    keyDIR := "./keys"
+
+    // fetch authRequest from sessionID
+    authRequest := requestMap[sessionID]
+
+    // print authRequest
+    log.Println(authRequest)
+
+    // load the verifcation key
+    var verificationKeyLoader = &KeyLoader{Dir: keyDIR}
+	
+	polygonAmoyResolver := state.ETHResolver{
+		RPCUrl: "https://polygon-amoy.infura.io/v3/<API_KEY_INFURA>",
+		ContractAddress: common.HexToAddress("0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"),
+	}
+
+	privadoMainResolver := state.ETHResolver{
+		RPCUrl: "https://rpc-mainnet.privado.id",
+		ContractAddress: common.HexToAddress("0x975556428F077dB5877Ea2474D783D6C69233742"),
+	}
+
+	resolvers := map[string]pubsignals.StateResolver{
+		"plygon:amoy":polygonAmoyResolver,
+		"privado:main":privadoMainResolver,
+	}
+
+    // EXECUTE VERIFICATION
+    verifier, err := auth.NewVerifier(verificationKeyLoader, resolvers, auth.WithIPFSGateway("https://ipfs.io"))
+    if err != nil {
+        log.Println(err.Error())
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }    
+    authResponse, err := verifier.FullVerify(
+        r.Context(),
+        string(tokenBytes),
+        authRequest.(protocol.AuthorizationRequestMessage),
+        pubsignals.WithAcceptedStateTransitionDelay(time.Minute*5))
+    if err != nil {
+        log.Println(err.Error())
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    //marshal auth resp
+    messageBytes, err := json.Marshal(authResponse)
+    if err != nil {
+        log.Println(err.Error())
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Header().Set("Content-Type", "application/json")
+    w.Write(messageBytes)
+    log.Println("verification passed")
 }
