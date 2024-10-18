@@ -61,6 +61,8 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	http.Handle("/agent/", http.StripPrefix("/agent/", http.FileServer(http.Dir("./"))))
+
 	// http.HandleFunc("/sign-in", GetAuthRequest)
 	http.HandleFunc("/agent", agentHandler)
 	http.HandleFunc("/callback", Callback)
@@ -118,17 +120,52 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("From:", infoToken.from)
 	fmt.Println("Message:", infoToken.message)
 
-	authRequestJSON := GetAuthRequest()
+	credentialProposal := createCredentialProposal()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(authRequestJSON)
+	w.Write(credentialProposal)
 }
+
+func createCredentialProposal() []byte {
+    proposal := map[string]interface{}{
+        "id": "36f9e851-d713-4b50-8f8d-8a9382f138ca",
+        "thid": "36f9e851-d713-4b50-8f8d-8a9382f138ca",
+        "typ": "application/iden3comm-plain-json",
+        "type": "https://iden3-communication.io/credentials/0.1/proposal",
+        "body": map[string]interface{}{
+            "proposals": []map[string]interface{}{
+                {
+                    "credentials": []map[string]interface{}{
+                        {
+                            "type": "LivenessProof",
+                            "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
+                        },
+                        {
+                            "type": "KYC",
+                            "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
+                        },
+                    },
+                    "type": "WebVerificationForm",
+                    "url": "https://82be-185-208-113-238.ngrok-free.app/agent/index.html",
+                    "expiration": time.Now().Add(24 * time.Hour).Format(time.RFC3339),
+                    "description": "You can pass the verification on our KYC provider by following the next link",
+                },
+            },
+        },
+        "to": "did:polygonid:polygon:mumbai:2qJUZDSCFtpR8QvHyBC4eFm6ab9sJo5rqPbcaeyGC4",
+        "from": "did:iden3:polygon:mumbai:x3HstHLj2rTp6HHXk2WczYP7w3rpCsRbwCMeaQ2H2",
+    }
+
+    msgBytes, _ := json.Marshal(proposal)
+    return msgBytes
+}
+
 
 func GetAuthRequest() []byte {
 
 	// Audience is verifier id
-	rURL := "https://f68c-185-208-113-238.ngrok-free.app"
+	rURL := "https://82be-185-208-113-238.ngrok-free.app"
 	sessionID := 1
 	CallbackURL := "/callback"
 	Audience := "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
