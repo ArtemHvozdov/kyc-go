@@ -8,19 +8,19 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	//"strconv"
 	"strings"
 	"time"
 
 	//"github.com/ethereum/go-ethereum/common"
 	circuits "github.com/iden3/go-circuits/v2"
-	auth "github.com/iden3/go-iden3-auth/v2"
+	//auth "github.com/iden3/go-iden3-auth/v2"
 
 	// "github.com/iden3/iden3comm/protocol"
 
 	//"github.com/iden3/go-iden3-auth/v2/pubsignals"
 	//"github.com/iden3/go-iden3-auth/v2/state"
-	"github.com/iden3/iden3comm/v2/protocol"
+	//"github.com/iden3/iden3comm/v2/protocol"
 )
 
 const VerificationKeyPath = "verification_key.json"
@@ -61,7 +61,6 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Чтение данных формы
     name := r.FormValue("name")
     if name == "" {
         http.Error(w, "Name is required", http.StatusBadRequest)
@@ -70,7 +69,6 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Name user:", name)
 
-    // Создание нового credential с добавлением имени
     credential := map[string]interface{}{
         "id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
         "@context": []string{
@@ -80,7 +78,7 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
         "type": []string{"VerifiableCredential", "KYCAgeCredential"},
         "credentialSubject": map[string]interface{}{
             "id": "did:polygonid:polygon:mumbai:2qJUZDSCFtpR8QvHyBC4eFm6ab9sJo5rqPbcaeyGC4",
-            "name": name, // Добавляем имя в credential
+            "name": name,
             "birthday": 19960424,
         },
         "issuer": "did:iden3:polygon:mumbai:x3HstHLj2rTp6HHXk2WczYP7w3rpCsRbwCMeaQ2H2",
@@ -89,7 +87,6 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("credential:", credential)
 
-    // Преобразование credential в JSON
     credentialJSON, err := json.Marshal(credential)
     if err != nil {
         http.Error(w, "Failed to create credential", http.StatusInternalServerError)
@@ -98,7 +95,6 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("credentialJSON:", credentialJSON)
 
-    // Отправка ответа
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     w.Write(credentialJSON)
@@ -115,7 +111,6 @@ func main() {
 
 	http.HandleFunc("/", homehHandler)
 	http.HandleFunc("/agent", agentHandler)
-	//http.HandleFunc("/callback", Callback)
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/issue-credential", issueCredentialHandler)
 
@@ -210,45 +205,3 @@ func createCredentialProposal() []byte {
     msgBytes, _ := json.Marshal(proposal)
     return msgBytes
 }
-
-
-func GetAuthRequest() []byte {
-
-	// Audience is verifier id
-	rURL := "https://25cd-185-208-113-238.ngrok-free.app"
-	sessionID := 1
-	CallbackURL := "/callback"
-	Audience := "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
-	
-	uri := fmt.Sprintf("%s%s?sessionId=%s", rURL, CallbackURL, strconv.Itoa(sessionID))
-	
-	// Generate request for basic authentication
-	var request protocol.AuthorizationRequestMessage = auth.CreateAuthorizationRequest("test flow", Audience, uri)
-	
-	// Add request for a specific proof
-	var mtpProofRequest protocol.ZeroKnowledgeProofRequest
-	mtpProofRequest.ID = 1
-	mtpProofRequest.CircuitID = string(circuits.AtomicQuerySigV2CircuitID)
-	mtpProofRequest.Query = map[string]interface{}{
-		"allowedIssuers": []string{"*"},
-		"credentialSubject": map[string]interface{}{
-			"birthday": map[string]interface{}{
-				"$lt": 20000101,
-			},
-		},
-		"context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
-		"type":    "KYCAgeCredential",
-	}
-	request.Body.Scope = append(request.Body.Scope, mtpProofRequest)
-	
-	// Store auth request in map associated with session ID
-	requestMap[strconv.Itoa(sessionID)] = request
-	
-	// print request
-	fmt.Println(request)
-	
-	msgBytes, _ := json.Marshal(request)
-	
-	return msgBytes
-}
-
