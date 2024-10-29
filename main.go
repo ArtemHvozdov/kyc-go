@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+
 	//"strconv"
 	"strings"
 	"time"
@@ -15,19 +16,31 @@ import (
 	//"github.com/ethereum/go-ethereum/common"
 	circuits "github.com/iden3/go-circuits/v2"
 	//auth "github.com/iden3/go-iden3-auth/v2"
-
 	// "github.com/iden3/iden3comm/protocol"
-
 	//"github.com/iden3/go-iden3-auth/v2/pubsignals"
 	//"github.com/iden3/go-iden3-auth/v2/state"
 	//"github.com/iden3/iden3comm/v2/protocol"
 )
 
 const VerificationKeyPath = "verification_key.json"
+const ngrokURL = "https://0ee3-185-208-113-238.ngrok-free.app"
+const issuerDID = "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
+const agentURL = ngrokURL + "/agent"
+
+var walletDID string
+var userName string
 
 type KeyLoader struct {
 	Dir string
 }
+
+type sessionData struct {
+	credential map[string]interface{}
+	offer map[string]interface{}
+	userName string
+}
+
+var firstUser sessionData
 
 func (m KeyLoader) Load(id circuits.CircuitID) ([]byte, error) {
 	return os.ReadFile(fmt.Sprintf("%s/%v/%s", m.Dir, id, VerificationKeyPath))
@@ -44,7 +57,7 @@ type InfoToken struct {
 	message string
 }
 
-var requestMap = make(map[string]interface{})
+//var requestMap = make(map[string]interface{})
 
 func homehHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -61,45 +74,25 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    name := r.FormValue("name")
-    if name == "" {
+    userName = r.FormValue("name")
+    if userName == "" {
         http.Error(w, "Name is required", http.StatusBadRequest)
         return
     }
 
-	log.Println("Name user:", name)
+	firstUser.userName = userName
 
-    credential := map[string]interface{}{
-        "id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
-        "@context": []string{
-            "https://www.w3.org/2018/credentials/v1",
-            "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
-        },
-        "type": []string{"VerifiableCredential", "KYCAgeCredential"},
-        "credentialSubject": map[string]interface{}{
-            "id": "did:polygonid:polygon:mumbai:2qJUZDSCFtpR8QvHyBC4eFm6ab9sJo5rqPbcaeyGC4",
-            "name": name,
-            "birthday": 19960424,
-        },
-        "issuer": "did:iden3:polygon:mumbai:x3HstHLj2rTp6HHXk2WczYP7w3rpCsRbwCMeaQ2H2",
-        "issuanceDate": time.Now().Format(time.RFC3339),
-    }
+	log.Println("Name user:", userName)
 
-	log.Println("credential:", credential)
+	firstUser.credential, firstUser.offer = createCredentialAndOffer()
 
-    credentialJSON, err := json.Marshal(credential)
-    if err != nil {
-        http.Error(w, "Failed to create credential", http.StatusInternalServerError)
-        return
-    }
 
-	log.Println("credentialJSON:", credentialJSON)
-
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    w.Write(credentialJSON)
+	http.Redirect(w, r, "/get-offer", http.StatusSeeOther)
 }
 
+func getOfferHandler(w http.ResponseWriter, r *http.Request) {
+    http.ServeFile(w, r, "get-offer.html")
+}
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -111,8 +104,10 @@ func main() {
 
 	http.HandleFunc("/", homehHandler)
 	http.HandleFunc("/agent", agentHandler)
-	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/issue-credential", issueCredentialHandler)
+	http.HandleFunc("/get-offer", getOfferHandler)
+	http.HandleFunc("/offers", offersHandler)
+	http.HandleFunc("/status", statusHandler)
 
 	fmt.Println("Server is running on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -159,6 +154,8 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
     	return
 	}
 
+	walletDID = from
+
 	infoToken.from = fmt.Sprintf("%v", from)
 	infoToken.message = fmt.Sprintf("%v", formattedPayload)
 
@@ -190,18 +187,82 @@ func createCredentialProposal() []byte {
                             "type": "KYC",
                             "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
                         },
+						{
+							"type": "KYCAgeCredential-test",
+							"context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
+						},
                     },
                     "type": "WebVerificationForm",
-                    "url": "https://25cd-185-208-113-238.ngrok-free.app/agent/index.html",
+                    "url": ngrokURL + "/agent/webVerifiicationForm.html",
                     "expiration": time.Now().Add(24 * time.Hour).Format(time.RFC3339),
                     "description": "You can pass the verification on our KYC provider by following the next link",
                 },
             },
         },
-        "to": "did:polygonid:polygon:mumbai:2qJUZDSCFtpR8QvHyBC4eFm6ab9sJo5rqPbcaeyGC4",
-        "from": "did:iden3:polygon:mumbai:x3HstHLj2rTp6HHXk2WczYP7w3rpCsRbwCMeaQ2H2",
+        "to": walletDID,
+        "from": issuerDID,
     }
 
     msgBytes, _ := json.Marshal(proposal)
     return msgBytes
+}
+
+func createCredentialAndOffer() (map[string]interface{}, map[string]interface{}) {
+		credential := map[string]interface{} {
+		"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
+		"typ": "application/iden3comm-plain-json",
+  		"type": "https://iden3-communication.io/credentials/1.0/issuance-response",
+		"to": walletDID,
+		"from": issuerDID,
+		"body": map[string]interface{} {
+			"credential": map[string]interface{} {
+				"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
+				"@context": []string {
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
+					"KYCAgeCredential-test",
+				},
+				"credentialSubject": map[string]interface{} {
+					"id": "did:polygonid:polygon:mumbai:2qJUZDSCFtpR8QvHyBC4eFm6ab9sJo5rqPbcaeyGC4",
+					"birthday": 19960424,
+					"documentType": 99,
+					"type": "KYCAgeCredential-test",
+				},
+				"issuer": issuerDID,
+				"expirationDate": "2058-07-10T11:33:20.000Z",
+				"issuanceDate":  time.Now().Format(time.RFC3339),
+				"credentialSchema": map[string]interface{} {
+					"id": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/refs/heads/main/schemas/json/KYCAgeCredential-v4.json",
+					"type": "JsonSchema2023",
+				},
+			},
+		},
+	}
+
+	credentialOffer :=  map[string]interface{} {
+		"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
+		"typ": "application/iden3comm-plain-json",
+		"type": "https://iden3-communication.io/credentials/1.0/offer",
+		"body": map[string]interface{}{
+		  "credentials": []map[string]interface{} {
+				{
+					"description": "KYCAgeCredential-test",
+					"id": "c7b66a79-b930-49d1-9a97-66ab8fd792ac",
+					"status": "pending",
+				},
+		  },
+		  "url": agentURL,
+		},
+		"to": walletDID,
+		"from": issuerDID,
+	}
+
+	return credential, credentialOffer
+}
+
+func offersHandler(w http.ResponseWriter, r *http.Request) {
+	credentialOfferFormatJSON, _ := json.Marshal(firstUser.offer)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(credentialOfferFormatJSON)
 }

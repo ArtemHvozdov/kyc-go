@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FORM Template</title>
+    <!-- <link rel="stylesheet" href="./style.css"> -->
+
+    <style>
+        
+
+        @media only screen and (max-width: 428px) {
+            form {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px
+            }
+
+            form input {
+                font-size: 20px;
+            }
+        }
+    </style>
+
+</head>
+<body style="height: 100vh; width: 100%; display: flex; flex-direction: column; margin: 0; overflow: hidden;">
+    <main style="height: 100%;">
+        <div style="height: 100%; display: flex; justify-content: center; align-items: center;">
+            <form action="/issue-credential" method="POST">
+                <input type="text" name="name" placeholder="Enter your name" style="font-size: 17px; 
+                padding: 5px; border-radius: 5px; box-sizing: border-box;">
+                <button type="submit" style="font-size: 17px; padding: 4px 10px; cursor: pointer;">Submit</button>
+            </form>
+        </div>
+    </main>    
+</body>
+</html>
