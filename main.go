@@ -23,7 +23,7 @@ import (
 )
 
 const VerificationKeyPath = "verification_key.json"
-const ngrokURL = "https://0ee3-185-208-113-238.ngrok-free.app"
+const ngrokURL = "https://e1ca-109-72-122-36.ngrok-free.app"
 const issuerDID = "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
 const agentURL = ngrokURL + "/agent"
 
@@ -154,13 +154,13 @@ func GetInfoByToken(w http.ResponseWriter, r *http.Request) {
     	return
 	}
 
-	walletDID = from
-
 	infoToken.from = fmt.Sprintf("%v", from)
 	infoToken.message = fmt.Sprintf("%v", formattedPayload)
 
 	fmt.Println("From:", infoToken.from)
 	fmt.Println("Message:", infoToken.message)
+
+	walletDID = from
 
 	credentialProposal := createCredentialProposal()
 
@@ -208,10 +208,10 @@ func createCredentialProposal() []byte {
 }
 
 func createCredentialAndOffer() (map[string]interface{}, map[string]interface{}) {
-		credential := map[string]interface{} {
+	credential := map[string]interface{} {
 		"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
 		"typ": "application/iden3comm-plain-json",
-  		"type": "https://iden3-communication.io/credentials/1.0/issuance-response",
+		"type": "https://iden3-communication.io/credentials/1.0/issuance-response",
 		"to": walletDID,
 		"from": issuerDID,
 		"body": map[string]interface{} {
@@ -238,11 +238,13 @@ func createCredentialAndOffer() (map[string]interface{}, map[string]interface{})
 		},
 	}
 
+	log.Println("credential:", credential)
+
 	credentialOffer :=  map[string]interface{} {
 		"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
 		"typ": "application/iden3comm-plain-json",
 		"type": "https://iden3-communication.io/credentials/1.0/offer",
-		"body": map[string]interface{}{
+		"body": map[string]interface{} {
 		  "credentials": []map[string]interface{} {
 				{
 					"description": "KYCAgeCredential-test",
@@ -255,6 +257,8 @@ func createCredentialAndOffer() (map[string]interface{}, map[string]interface{})
 		"to": walletDID,
 		"from": issuerDID,
 	}
+
+	log.Println("credentialOffer:", credentialOffer)
 
 	return credential, credentialOffer
 }
