@@ -23,7 +23,7 @@ import (
 )
 
 const VerificationKeyPath = "verification_key.json"
-const ngrokURL = "https://e1ca-109-72-122-36.ngrok-free.app"
+const ngrokURL = "https://a2e2-109-72-122-36.ngrok-free.app"
 const issuerDID = "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR"
 const agentURL = ngrokURL + "/agent"
 
@@ -57,7 +57,23 @@ type InfoToken struct {
 	message string
 }
 
+type ChangeHandlerToken struct {
+	defaultPrivadoToken bool
+	responseOfferPrivadoToken bool
+}
+
+var stateAgentHandlers = ChangeHandlerToken{}
+
 //var requestMap = make(map[string]interface{})
+
+func credentialIssuance(w http.ResponseWriter, r *http.Request) {
+	log.Println("firstUser credential:", firstUser.credential)
+	credentialJSON, _ := json.Marshal(firstUser.credential)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(credentialJSON)
+}
 
 func homehHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -65,7 +81,21 @@ func homehHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func agentHandler(w http.ResponseWriter, r *http.Request) {
-	GetInfoByToken(w,r)
+	if stateAgentHandlers.defaultPrivadoToken && !stateAgentHandlers.responseOfferPrivadoToken {
+		log.Println("Function credentialIssuance start be calling...")
+		log.Println("State agent handlers:", stateAgentHandlers)
+		credentialIssuance(w,r)
+		stateAgentHandlers.responseOfferPrivadoToken = true
+		log.Println("Function credentialIssuance was be calling...")
+		log.Println("State agent handlers:", stateAgentHandlers)
+	}
+
+	if !stateAgentHandlers.defaultPrivadoToken {
+		GetInfoByToken(w,r)
+		stateAgentHandlers.defaultPrivadoToken = true
+		log.Println("State agent handlers:", stateAgentHandlers)
+		log.Println("Function getInfoByToken was be calling...")
+	}
 }
 
 func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +116,6 @@ func issueCredentialHandler(w http.ResponseWriter, r *http.Request) {
 
 	firstUser.credential, firstUser.offer = createCredentialAndOffer()
 
-
 	http.Redirect(w, r, "/get-offer", http.StatusSeeOther)
 }
 
@@ -99,6 +128,14 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "OK")
 }
 
+func getCredentialHandler(w http.ResponseWriter, r *http.Request) {
+	credentialJSON, _ := json.Marshal(firstUser.credential)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(credentialJSON)
+}
+
 func main() {
 	http.Handle("/agent/", http.StripPrefix("/agent/", http.FileServer(http.Dir("./"))))
 
@@ -108,6 +145,7 @@ func main() {
 	http.HandleFunc("/get-offer", getOfferHandler)
 	http.HandleFunc("/offers", offersHandler)
 	http.HandleFunc("/status", statusHandler)
+	http.HandleFunc("/get-credential", getCredentialHandler)
 
 	fmt.Println("Server is running on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -209,7 +247,8 @@ func createCredentialProposal() []byte {
 
 func createCredentialAndOffer() (map[string]interface{}, map[string]interface{}) {
 	credential := map[string]interface{} {
-		"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
+		"id": "36f9e851-d713-4b50-8f8d-8a9382f138ca",
+		"thid": "36f9e851-d713-4b50-8f8d-8a9382f138ca",
 		"typ": "application/iden3comm-plain-json",
 		"type": "https://iden3-communication.io/credentials/1.0/issuance-response",
 		"to": walletDID,
@@ -219,6 +258,10 @@ func createCredentialAndOffer() (map[string]interface{}, map[string]interface{})
 				"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
 				"@context": []string {
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld",
+				},
+				"type": []string {
+					// "VerifiableCredential",
+					// "KYCAgeCredential",
 					"KYCAgeCredential-test",
 				},
 				"credentialSubject": map[string]interface{} {
@@ -234,14 +277,46 @@ func createCredentialAndOffer() (map[string]interface{}, map[string]interface{})
 					"id": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/refs/heads/main/schemas/json/KYCAgeCredential-v4.json",
 					"type": "JsonSchema2023",
 				},
+				"credentialStatus": map[string]interface{} {
+					"id": "https://rhs-staging.polygonid.me",
+					"revocationNonce": 1000,
+					"type": "Iden3ReverseSparseMerkleTreeProof",
+				},
+				"proof": []map[string]interface{} {
+					{
+						"type": "BJJSignature2021",
+						"issuerData": map[string]interface{} {
+							"id": issuerDID,
+							"state": map[string]interface{}{
+								"rootOfRoots": "0000000000000000000000000000000000000000000000000000000000000000",
+								"revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+								"claimsTreeRoot": "5e5dca21a62dfbbd8b984a997dd9d666b6710d5499906301b19fb6996bfc1a02",
+								"value": "139042475daf67e0c340aef5540f8979b46a0eed13951c6ce60dad8875d1ab1e",
+							},
+							"authCoreClaim": "cca3371a6cb1b715004407e325bd993c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007cc77af06d6ea9f91434ce69e46821371cc341eb9e190262a16f46d15410ce0d1a090d38ded1e32a74e5fa0908764606adbcb917edff84b6ca60968d8a8d79090000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+							"mtp": map[string]interface{} {
+								"existence": true,
+								"siblings": []interface{}{},
+							},
+							"credentialStatus": map[string]interface{}{
+								"id": "https://rhs-staging.polygonid.me",
+								"revocationNonce": 0,
+								"type": "Iden3ReverseSparseMerkleTreeProof",
+							},
+						},
+						"coreClaim": "c9b2370371b7fa8b3dab2a5ba81b68382a00000000000000000000000000000002128459e997f3d9402b75af3fb9ad1e2db8f3288d3f5b6a13fa833621070d0069dee7de22463f48d75e219aed6cebcaadde18c1aacce28cd53db0317d1e9d2b0000000000000000000000000000000000000000000000000000000000000000e80300000000000080d481a60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+						"signature": "4fb847963a0903ead57a45bcf511f84067b092aa5b21e95349ad3cf284f2678b8522765989e807ec7ab36ca541dab96a0604abc1a1ea27db1bf59a23f0686f04",
+					},
+				},
 			},
 		},
 	}
 
-	log.Println("credential:", credential)
+	// log.Println("credential:", credential)
 
 	credentialOffer :=  map[string]interface{} {
-		"id": "urn:uuid:53a608cb-b5b6-4cc9-96a8-c230ff955554",
+		"id": "36f9e851-d713-4b50-8f8d-8a9382f138ca",
+		"thid": "36f9e851-d713-4b50-8f8d-8a9382f138ca",
 		"typ": "application/iden3comm-plain-json",
 		"type": "https://iden3-communication.io/credentials/1.0/offer",
 		"body": map[string]interface{} {
@@ -249,7 +324,6 @@ func createCredentialAndOffer() (map[string]interface{}, map[string]interface{})
 				{
 					"description": "KYCAgeCredential-test",
 					"id": "c7b66a79-b930-49d1-9a97-66ab8fd792ac",
-					"status": "pending",
 				},
 		  },
 		  "url": agentURL,
@@ -258,7 +332,7 @@ func createCredentialAndOffer() (map[string]interface{}, map[string]interface{})
 		"from": issuerDID,
 	}
 
-	log.Println("credentialOffer:", credentialOffer)
+	//log.Println("credentialOffer:", credentialOffer)
 
 	return credential, credentialOffer
 }

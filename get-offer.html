@@ -15,32 +15,24 @@
 
     const textContainer = document.getElementById("synaps-container")
 
-    const clientType = "Iden3MobileServiceV1";
-    const timeout = 3000;
 
     const response = await fetch(`${window.location.origin}/offers`);
+
     const message = await response.json();
-
-    const callParentHandler = (message1) => {
-      const message = JSON.stringify(message1)
-      console.log("Message in function Parent:", message)
-      console.log("Type of message in function Parent:", typeof(message))
-      if (window.flutter_inappwebview) {
-        window.flutter_inappwebview.callHandler("iden3comm", message);
-      }
-
-      if (window.parent) {
-        window.parent.postMessage({ type: "iden3comm", payload: message }, "*");
-      }
+    try {
+      JSON.parse(message);
+      console.log("The input is valid JSON.");
+      
+    } catch (e) {
+      console.log("The input is not valid JSON.");
+      
     }
 
-    if (message) { 
-      callParentHandler(message)
-    } else {
-      console.log("Message undefined...")
-    }
+    window.flutter_inappwebview.callHandler("iden3comm", message);
+
 
 
   </script>
 </body>
 </html>
+
